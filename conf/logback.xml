@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{mm:ss.SSS} [%thread] %M %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>D:/workspaces/logs/file.log</file>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<Pattern>%d{yyyy-MM-dd_HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+			<FileNamePattern>c:/jcg.%i.log.zip</FileNamePattern>
+			<MinIndex>1</MinIndex>
+			<MaxIndex>10</MaxIndex>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+			<MaxFileSize>20MB</MaxFileSize>
+		</triggeringPolicy>
+	</appender>
+  
+	<logger name="org.springframework" level="INFO" />
+	<logger name="es.uvigo" level="INFO" />
+	<logger name="org.springframework.web" level="INFO" />
+	<logger name="org.hibernate" level="INFO"/>
+	<logger name="org.hibernate.SQL" level="DEBUG"/>
+	<logger name="org.hibernate.hql" level="DEBUG"/>
+	<logger name="org.hibernate.type" level="TRACE"/>
+	<logger name="org.hibernate.tool" level="TRACE"/>
+	<logger name="org.hibernate.type.descriptor" level="INFO"/>
+	<logger name="org.hibernate.type.CollectionType" level="INFO"/>
+	<logger name="com.mchange" level="INFO"/>
+	<logger name="org.apache" level="OFF"/>
+	<logger name="httpclient.wire" level="INFO"/>
+	<logger name="org.sbml" level ="OFF"/>
+  
+  <!--  <logger name="pt.uminho.ceb.biosystems.mew.optflux" level="INFO" /> 
+  <logger name="pt.uminho.ceb.biosystems.mew" level="INFO" /> -->
+	<logger name="pt.uminho.ceb.biosystems.mew.biocomponents" level="DEBUG" />
+	<logger name="pt.uminho.ceb.biosystems.mew.optflux.OptFlux" level="TRACE" />
+	<logger name="pt.uminho.sysbio.merlin.core.remote.retriever.alignment" level="INFO" />
+	<logger name="pt.uminho.sysbio.common.transporters.core.transport.reactions.containerAssembly" level="INFO" />
+	<logger name="pt.uminho.sysbio.common.transporters.core.transport.reactions.containerAssembly.TransportContainerRunnable" level="DEBUG" />
+   
+	<root level="ERROR">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="FILE" />
+	</root>
+  
+ </configuration>
