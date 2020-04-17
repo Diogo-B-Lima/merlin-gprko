@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import pt.uminho.ceb.biosystems.merlin.bioapis.externalAPI.kegg.KeggAPI;
 import pt.uminho.ceb.biosystems.merlin.core.containers.gpr.GeneAssociation;
 import pt.uminho.ceb.biosystems.merlin.core.containers.gpr.ModuleCI;
@@ -39,7 +38,7 @@ public class GPR_KO {
 				gprResults.addAll(results);
 			}
 
-			String[] header = {"Module Name", "Module", "Reaction", "Protein", "Genes", "Definition"};
+			String[] header = {"Pathway Names" ,"Pathway IDs" , "Module Name", "Module", "Reaction", "Protein", "Genes", "Definition","Parsed Definition", "Parsed Definitions Merged by Module"};
 			ExcelWriter.main(header, gprResults, args[1]);
 
 		} catch (Exception e) {
@@ -104,17 +103,23 @@ public class GPR_KO {
 							for(GeneAssociation geneAssociation : proteinRule.getGenes()) {
 
 								List<String> gene = geneAssociation.getGenes();
+								String parsedDefinitionsByModule = "[";
+								List<String> parsedDefinitionsByModuleAux = new ArrayList<String>();
+								int moduleCounter = 0;
 
 								for(ModuleCI module : geneAssociation.getModules().values()) {
 
-									String[] koGeneResults = new String[6];
+									moduleCounter++;
+									String[] koGeneResults = new String[10];
 
 									String definition = module.getDefinition();
 
-									koGeneResults[0] = module.getName();
-									koGeneResults[1] = module.getModule();
-									koGeneResults[2] = reaction;
-									koGeneResults[3] = protein;
+									koGeneResults[0] = String.join("|", module.getPathwaysNames());
+									koGeneResults[1] = String.join("|", module.getPathways());
+									koGeneResults[2] = module.getName();
+									koGeneResults[3] = module.getModule();
+									koGeneResults[4] = reaction;
+									koGeneResults[5] = protein;
 
 									String genesAsStr = "";
 									for(int geneIndex = 0; geneIndex < gene.size() ; geneIndex++)
@@ -123,11 +128,38 @@ public class GPR_KO {
 										else
 											genesAsStr = genesAsStr + gene.get(geneIndex);
 
-									koGeneResults[4] = genesAsStr;
+									koGeneResults[6] = genesAsStr.trim();
 
-									koGeneResults[5] = definition;
+									koGeneResults[7] = definition;
 
+									koGeneResults[8] = parseDefinition(definition);
+									
+									
+									char[] alphabeticallySortedDefinitionAsArray = koGeneResults[8].toCharArray();
+									Arrays.sort(alphabeticallySortedDefinitionAsArray);
+									String alphabeticallySortedDefinition = new String(alphabeticallySortedDefinitionAsArray);
+									
+
+									if(!parsedDefinitionsByModule.equalsIgnoreCase("[")) {
+
+										// avoid repeated definitions 
+										if(!parsedDefinitionsByModuleAux.contains(alphabeticallySortedDefinition)) {
+
+											parsedDefinitionsByModule += "," + koGeneResults[8];
+											parsedDefinitionsByModuleAux.add(alphabeticallySortedDefinition);
+										}
+									}
+
+									else {
+										parsedDefinitionsByModule += koGeneResults[8];
+										parsedDefinitionsByModuleAux.add(alphabeticallySortedDefinition);
+									}
 									results.add(koGeneResults);
+								}
+
+								for(int index = 0; index < moduleCounter; index++) {
+									
+									results.get(results.size() - index -1)[9] = parsedDefinitionsByModule + "]";
 								}
 							}
 						}
@@ -165,6 +197,120 @@ public class GPR_KO {
 		return returnModules;
 	}
 
+
+
+
+	public static String parseDefinition(String definition) throws Exception {
+
+
+		String parsedDefinition = "";
+
+		// definition does not have "or" nor "and", only a KO
+		if(!definition.contains("and") & !definition.contains("or"))
+			return "[" + definition + "]";
+
+		// definition has only "and" rules
+		if(definition.contains("and") & !definition.contains("or"))
+			return "[[" + definition.replace(" and ", ",") + "]]";
+
+		// definition has only "or" rules
+		if(!definition.contains("and") & definition.contains("or"))
+			return "[" + definition.replace(" or ", ",") + "]";
+
+		// definition has a combination of "and" and "or" rules 
+		if(definition.contains("and") & definition.contains("or")) {
+
+			// remove pesky extra blanks
+			ArrayList<String> definitionAsArrayFiltering = new ArrayList<String>(Arrays.asList(definition.split(" ")));
+			definitionAsArrayFiltering.removeAll(Arrays.asList(""));
+			String[] definitionAsArray = definitionAsArrayFiltering.toArray(new String[0]);;
+
+			parsedDefinition = "[";
+			boolean insideDoubleBracket = false;
+			boolean beginDoubleBracket = false;
+
+
+			// iterate over every item but stop at the second to last item, because we are always looking at the current and next item of the array
+			for(int index = 0; index < definitionAsArray.length -1; index++) {
+
+				String item = definitionAsArray[index];
+				String nextItem = definitionAsArray[index + 1];
+
+
+				if(!item.equalsIgnoreCase("and") && !item.equalsIgnoreCase("or")) {
+
+
+					// next item is an "and" rule or it is a KO
+					if(nextItem.equalsIgnoreCase("and") || !nextItem.equalsIgnoreCase("or")) {
+
+						// if a double bracket set of "and" rules has not begun yet
+						if (!beginDoubleBracket) {
+
+							// if it is not in the beggining of the parsed definition
+							if(parsedDefinition.length()>1) {
+
+								parsedDefinition += "," + "[[" + item;
+								beginDoubleBracket = true;
+								insideDoubleBracket = true;
+
+							}
+
+							//if it is in the beggining of the parsed definition
+							else {
+
+								parsedDefinition += "[[" + item;
+								beginDoubleBracket = true;
+								insideDoubleBracket = true;
+
+							}
+						}
+						// a double bracket set has been opened and not yet closed
+						else {
+							parsedDefinition += "," + item;
+						}
+					}
+					// next item is an "or" rule
+					else {
+
+						// if we are inside a double bracket set we need to close it
+						if(insideDoubleBracket) {
+							parsedDefinition += "," + item + "]]";
+							insideDoubleBracket = false;
+							beginDoubleBracket = false;
+						}
+
+						// we are not inside a double bracket set, therefore we are just adding "or" rules
+						else {
+							if(parsedDefinition.length()>1)
+								parsedDefinition += "," + item;
+							else
+								parsedDefinition += item;
+						}
+					}
+				}
+
+				// if index is currently the second to last item (the second to last item is always a "and" or "or" rule and the last item is always a KO
+				if(index + 1 == definitionAsArray.length -1) {
+
+					// if we are currently inside a double bracket set we are going to add the KO and close it
+					if(insideDoubleBracket)
+						parsedDefinition += "," + nextItem + "]]";
+
+					// else, we are simply adding more "or" rules
+					else
+						parsedDefinition += "," + nextItem;						
+				}
+			}
+			parsedDefinition += "]";
+		}	
+		return parsedDefinition;
+	}
+
+
+
+
+
+
 	private static List<ReactionProteinGeneAssociation> verifyModules(List<String> modules, String reaction, String ecNumber, String ortholog) throws Exception{
 
 		List<ReactionProteinGeneAssociation> gpr_list = new ArrayList<>();
@@ -180,6 +326,8 @@ public class GPR_KO {
 
 	private static ReactionProteinGeneAssociation verifyModule(List<String> modules, String reaction, String ec_number, String ortholog) throws Exception {
 
+		if(ortholog.equalsIgnoreCase("K01666"))
+			System.out.println("here");
 		ReactionProteinGeneAssociation gpr = new ReactionProteinGeneAssociation(reaction);
 		ProteinGeneAssociation protein_rule = new ProteinGeneAssociation(ec_number);
 
@@ -296,6 +444,19 @@ public class GPR_KO {
 			pathways.retainAll(pathways_module);
 			mic.setPathways(pathways_module);
 
+			List<String> pathwayNames = new ArrayList<>();
+			for(String pathwayId:pathways_module) {
+
+				String pathName = KeggAPI.getPathwayName("map" + pathwayId);
+				if(pathName != null & !pathName.isEmpty())
+					pathwayNames.add(pathName);
+				else
+					pathwayNames.add("-");
+			}
+
+			mic.setPathwaysNames(pathwayNames);
+
+
 			String express = definition.get(index).toString().replaceAll(",", " or ").replaceAll("\\+", " and ").replaceAll("\\[", "").replaceAll("\\]", "");
 
 			String rule = express.trim();
@@ -306,7 +467,7 @@ public class GPR_KO {
 				String[] or_rules = rule.split(" or ");
 				for(String gene : or_rules)
 					if(gene.trim().contains(ortholog))
-						geneList.add(gene);
+						geneList.add(gene.trim());
 			}
 
 			if(rule.contains(" and ")) {
@@ -315,7 +476,7 @@ public class GPR_KO {
 
 				for(String gene : and_rules)
 					if(gene.trim().contains(ortholog))
-						geneList.add(gene);
+						geneList.add(gene.trim());
 			}
 
 			if(rule.equalsIgnoreCase(ortholog) && geneList.isEmpty())
