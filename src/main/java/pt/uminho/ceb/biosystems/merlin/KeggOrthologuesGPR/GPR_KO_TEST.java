@@ -1,6 +1,10 @@
 package pt.uminho.ceb.biosystems.merlin.KeggOrthologuesGPR;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.junit.Test;
 
 public class GPR_KO_TEST {
@@ -20,16 +24,16 @@ public class GPR_KO_TEST {
 			String inputFile3 = "C://Users//diogo//Desktop//kos//kos3.txt";
 			String outputFilePath3 = "C://Users//diogo//Desktop//kos//kos3.xlsx";
 
-			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosDebug.txt";
-			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosDebug.xlsx";
+			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosNewVersion.txt";
+			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosNewVersion.xlsx";
 
 			String[] input = new String[2];
 			input[0] = inputFileDebug;
 			input[1] = outputFilePathDebug;
-			GPR_KO.main(input);
+			//GPR_KO.main(input);
 			//GPR_KO.main(inputFile2, outputFilePath2);
 			//GPR_KO.main(inputFile3, outputFilePath3);
-
+			mergeOrRules("[K01692,K07511,K13767,K01825,K01782,K07514,K07515,K10527],[K01692],[[[K1,K2,K01692]],K1,K2]");
 
 
 		} catch (Exception e) {
@@ -38,6 +42,65 @@ public class GPR_KO_TEST {
 	}
 
 
+	//@Test
+	public void mergeOrRules(String parsedDefinitionByModule) throws Exception{
+
+		
+
+		//Split definition in a list of rules
+		String[] def = parsedDefinitionByModule.split(",\\[");
+		if(def.length > 1) {
+			for(int index = 1; index < def.length; index++) {
+				def[index] = "[" + def[index];
+			}
+		}
+
+		ArrayList<String[]> orRules = new ArrayList<String[]>();
+		String andRules = "";
+		for(int index = 0; index < def.length; index++) {
+
+			// verify if the rule is a "or" rule
+			if(!def[index].startsWith("[[")) {
+
+				String newDef = def[index].replace("[", "").replace("]", "");
+				String[] newDefArray = newDef.split(",");
+				orRules.add(newDefArray);
+			}
+			else {
+				if(andRules.isEmpty())
+					andRules += def[index];
+				else
+					andRules += "," + def[index];
+			}
+		}
+		List<String> firstOrRule = new ArrayList<String>();
+		String finalOrRules = "";
+
+		if(orRules.size() > 1) {
+
+			firstOrRule.addAll(Arrays.asList(orRules.get(0)));
+			for(int index = 1; index < orRules.size(); index++) {
+				Set<String> set = new LinkedHashSet<>(firstOrRule);
+		        set.addAll(Arrays.asList(orRules.get(index)));
+				firstOrRule = (new ArrayList<>(set));
+			}
+			finalOrRules = "[" + String.join(",", firstOrRule) + "]";
+
+		}
+
+		else if (orRules.size() == 1) {
+			firstOrRule.addAll(Arrays.asList(orRules.get(0)));
+			finalOrRules = "[" + String.join(",", firstOrRule) + "]";
+		}
+
+		if(finalOrRules.isEmpty())
+			System.out.println(andRules);
+		else if(!finalOrRules.isEmpty() && !andRules.isEmpty())
+				andRules = "," + andRules;
+		System.out.println(finalOrRules + andRules);
+
+
+	}
 
 	//@Test
 	public void parseDefinition() throws Exception {

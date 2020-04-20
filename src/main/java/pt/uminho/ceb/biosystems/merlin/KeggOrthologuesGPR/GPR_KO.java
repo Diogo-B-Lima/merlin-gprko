@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -103,7 +104,7 @@ public class GPR_KO {
 							for(GeneAssociation geneAssociation : proteinRule.getGenes()) {
 
 								List<String> gene = geneAssociation.getGenes();
-								String parsedDefinitionsByModule = "[";
+								String parsedDefinitionsByModule = "";
 								List<String> parsedDefinitionsByModuleAux = new ArrayList<String>();
 								int moduleCounter = 0;
 
@@ -133,14 +134,14 @@ public class GPR_KO {
 									koGeneResults[7] = definition;
 
 									koGeneResults[8] = parseDefinition(definition);
-									
-									
+
+
 									char[] alphabeticallySortedDefinitionAsArray = koGeneResults[8].toCharArray();
 									Arrays.sort(alphabeticallySortedDefinitionAsArray);
 									String alphabeticallySortedDefinition = new String(alphabeticallySortedDefinitionAsArray);
-									
 
-									if(!parsedDefinitionsByModule.equalsIgnoreCase("[")) {
+
+									if(!parsedDefinitionsByModule.isEmpty()) {
 
 										// avoid repeated definitions 
 										if(!parsedDefinitionsByModuleAux.contains(alphabeticallySortedDefinition)) {
@@ -157,9 +158,11 @@ public class GPR_KO {
 									results.add(koGeneResults);
 								}
 
+								parsedDefinitionsByModule = mergeOrRules(parsedDefinitionsByModule);
+
 								for(int index = 0; index < moduleCounter; index++) {
-									
-									results.get(results.size() - index -1)[9] = parsedDefinitionsByModule + "]";
+
+									results.get(results.size() - index -1)[9] = parsedDefinitionsByModule;
 								}
 							}
 						}
@@ -169,6 +172,68 @@ public class GPR_KO {
 		return results;
 
 	}
+
+
+	private static String mergeOrRules(String parsedDefinitionByModule) throws Exception{
+
+		
+
+		//Split definition in a list of rules
+		String[] def = parsedDefinitionByModule.split(",\\[");
+		if(def.length > 1) {
+			for(int index = 1; index < def.length; index++) {
+				def[index] = "[" + def[index];
+			}
+		}
+
+		ArrayList<String[]> orRules = new ArrayList<String[]>();
+		String andRules = "";
+		for(int index = 0; index < def.length; index++) {
+
+			// verify if the rule is a "or" rule
+			if(!def[index].startsWith("[[")) {
+
+				String newDef = def[index].replace("[", "").replace("]", "");
+				String[] newDefArray = newDef.split(",");
+				orRules.add(newDefArray);
+			}
+			else {
+				if(andRules.isEmpty())
+					andRules += def[index];
+				else
+					andRules += "," + def[index];
+			}
+		}
+		List<String> firstOrRule = new ArrayList<String>();
+		String finalOrRules = "";
+
+		if(orRules.size() > 1) {
+
+			firstOrRule.addAll(Arrays.asList(orRules.get(0)));
+			for(int index = 1; index < orRules.size(); index++) {
+				Set<String> set = new LinkedHashSet<>(firstOrRule);
+		        set.addAll(Arrays.asList(orRules.get(index)));
+				firstOrRule = (new ArrayList<>(set));
+			}
+			finalOrRules = "[" + String.join(",", firstOrRule) + "]";
+
+		}
+
+		else if (orRules.size() == 1) {
+			firstOrRule.addAll(Arrays.asList(orRules.get(0)));
+			finalOrRules = "[" + String.join(",", firstOrRule) + "]";
+		}
+
+		if(finalOrRules.isEmpty())
+			return andRules;
+		else if(!finalOrRules.isEmpty() && !andRules.isEmpty())
+				andRules = "," + andRules;
+		return finalOrRules + andRules;
+
+	}
+
+
+
 
 
 	private static List<String> parseModules(String modules) throws Exception{
@@ -211,11 +276,11 @@ public class GPR_KO {
 
 		// definition has only "and" rules
 		if(definition.contains("and") & !definition.contains("or"))
-			return "[[" + definition.replace(" and ", ",") + "]]";
+			return "[[" + definition.replace(" and ", ",").replace(" ", "") + "]]";
 
 		// definition has only "or" rules
 		if(!definition.contains("and") & definition.contains("or"))
-			return "[" + definition.replace(" or ", ",") + "]";
+			return "[" + definition.replace(" or ", ",").replace(" ", "") + "]";
 
 		// definition has a combination of "and" and "or" rules 
 		if(definition.contains("and") & definition.contains("or")) {
