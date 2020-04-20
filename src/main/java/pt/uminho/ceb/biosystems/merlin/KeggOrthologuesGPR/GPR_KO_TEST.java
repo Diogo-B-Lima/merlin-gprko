@@ -24,16 +24,16 @@ public class GPR_KO_TEST {
 			String inputFile3 = "C://Users//diogo//Desktop//kos//kos3.txt";
 			String outputFilePath3 = "C://Users//diogo//Desktop//kos//kos3.xlsx";
 
-			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosNewVersion.txt";
-			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosNewVersion.xlsx";
+			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosDebug.txt";
+			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosDebug.xlsx";
 
 			String[] input = new String[2];
 			input[0] = inputFileDebug;
 			input[1] = outputFilePathDebug;
-			//GPR_KO.main(input);
+			GPR_KO.main(input);
 			//GPR_KO.main(inputFile2, outputFilePath2);
 			//GPR_KO.main(inputFile3, outputFilePath3);
-			mergeOrRules("[K01692,K07511,K13767,K01825,K01782,K07514,K07515,K10527],[K01692],[[[K1,K2,K01692]],K1,K2]");
+			//mergeOrRules("[K01692,K07511,K13767,K01825,K01782,K07514,K07515,K10527],[K01692],[[[K1,K2,K01692]],K1,K2]");
 
 
 		} catch (Exception e) {

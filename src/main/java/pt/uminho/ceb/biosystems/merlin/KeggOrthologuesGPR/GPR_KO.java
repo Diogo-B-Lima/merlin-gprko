@@ -8,9 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
@@ -39,8 +41,9 @@ public class GPR_KO {
 				gprResults.addAll(results);
 			}
 
-			String[] header = {"Pathway Names" ,"Pathway IDs" , "Module Name", "Module", "Reaction", "Protein", "Genes", "Definition","Parsed Definition", "Parsed Definitions Merged by Module"};
-			ExcelWriter.main(header, gprResults, args[1]);
+			List<Object[]> gprResultsFinal = mergeParsedDefinitionsByModuleAndReaction(gprResults);
+			String[] header = {"Pathway Names" ,"Pathway IDs" , "Module Name", "Module", "Reaction", "Protein", "Genes", "Definition","Parsed Definition", "Parsed Definitions Merged by Module", "Parsed Definitions Merged by Module and Reaction"};
+			ExcelWriter.main(header, gprResultsFinal, args[1]);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -111,7 +114,7 @@ public class GPR_KO {
 								for(ModuleCI module : geneAssociation.getModules().values()) {
 
 									moduleCounter++;
-									String[] koGeneResults = new String[10];
+									String[] koGeneResults = new String[11];
 
 									String definition = module.getDefinition();
 
@@ -176,7 +179,7 @@ public class GPR_KO {
 
 	private static String mergeOrRules(String parsedDefinitionByModule) throws Exception{
 
-		
+
 
 		//Split definition in a list of rules
 		String[] def = parsedDefinitionByModule.split(",\\[");
@@ -212,7 +215,7 @@ public class GPR_KO {
 			firstOrRule.addAll(Arrays.asList(orRules.get(0)));
 			for(int index = 1; index < orRules.size(); index++) {
 				Set<String> set = new LinkedHashSet<>(firstOrRule);
-		        set.addAll(Arrays.asList(orRules.get(index)));
+				set.addAll(Arrays.asList(orRules.get(index)));
 				firstOrRule = (new ArrayList<>(set));
 			}
 			finalOrRules = "[" + String.join(",", firstOrRule) + "]";
@@ -227,11 +230,38 @@ public class GPR_KO {
 		if(finalOrRules.isEmpty())
 			return andRules;
 		else if(!finalOrRules.isEmpty() && !andRules.isEmpty())
-				andRules = "," + andRules;
+			andRules = "," + andRules;
 		return finalOrRules + andRules;
 
 	}
 
+	private static List<Object[]> mergeParsedDefinitionsByModuleAndReaction(List<Object[]> gprRulesFinal) throws Exception{
+
+
+		HashMap<String, String> reactionsParsedDefinitions = new HashMap<String, String>();
+
+		// Compile all definitions by reaction
+		for(Object[] entry:gprRulesFinal) {
+			String reaction = (String) entry[4];
+			String parsedDefinition = (String) entry[8];
+			if(!reactionsParsedDefinitions.containsKey(reaction))
+				reactionsParsedDefinitions.put(reaction, parsedDefinition);
+			else {
+				String oldDefinition = reactionsParsedDefinitions.get(reaction);
+				reactionsParsedDefinitions.replace(reaction, oldDefinition + "," + parsedDefinition);
+			}
+		}
+
+		// Merge all definitions with the same algorithm used for merging definitions by module
+		for(Map.Entry<String, String> entry : reactionsParsedDefinitions.entrySet())
+			reactionsParsedDefinitions.replace(entry.getKey(), mergeOrRules(entry.getValue()));
+
+		// Change the last value of the results (which were previosuly null) to the new merged definition
+		for(Object[] entry:gprRulesFinal) 
+			entry[10] = reactionsParsedDefinitions.get(entry[4]);
+
+		return gprRulesFinal;
+	}
 
 
 
