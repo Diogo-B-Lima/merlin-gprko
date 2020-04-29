@@ -14,18 +14,9 @@ public class GPR_KO_TEST {
 	public void runGPR_KO() {
 
 		try {
-
-			String inputFile = "C://Users//diogo//Desktop//kos//kos.txt";
-			String outputFilePath = "C://Users//diogo//Desktop//kos//kos.xlsx";
-
-			String inputFile2 = "C://Users//diogo//Desktop//kos//kos2.txt";
-			String outputFilePath2 = "C://Users//diogo//Desktop//kos//kos2.xlsx";
-
-			String inputFile3 = "C://Users//diogo//Desktop//kos//kos3.txt";
-			String outputFilePath3 = "C://Users//diogo//Desktop//kos//kos3.xlsx";
-
-			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosDebug.txt";
-			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosDebug.xlsx";
+			
+			String inputFileDebug = "C://Users//diogo//Desktop//kos//kosFinal.txt";
+			String outputFilePathDebug = "C://Users//diogo//Desktop//kos//kosFinal.xlsx";
 
 			String[] input = new String[2];
 			input[0] = inputFileDebug;

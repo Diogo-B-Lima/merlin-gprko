@@ -81,95 +81,97 @@ public class GPR_KO {
 
 			if(!reactions.isEmpty()) {
 
-
-
 				reactions.retainAll(reactionsKO);
-
-				List<ReactionProteinGeneAssociation> rpga = null;
+				List<List<ReactionProteinGeneAssociation>> rpgaList = new ArrayList<List<ReactionProteinGeneAssociation>>();
 
 				for(String reaction : reactions) {
-
+					List<ReactionProteinGeneAssociation> rpga = null;
 					rpga = GPR_KO.verifyModules(modules, reaction, ecNumber, ko);
+					rpgaList.add(rpga);
 
 				}
 
-				if(rpga!=null)
-					for(int ruleIndex = 0; ruleIndex < rpga.size() ; ruleIndex++) {
-
-						ReactionsGPR_CI rpg = new ReactionsGPR_CI(rpga.get(ruleIndex).getReaction());
-
-						String reaction = rpg.getReaction();
-
-						for(ProteinGeneAssociation proteinRule : rpga.get(ruleIndex).getProteinGeneAssociation().values()) {
-
-							String protein = proteinRule.getProtein();
-
-							for(GeneAssociation geneAssociation : proteinRule.getGenes()) {
-
-								List<String> gene = geneAssociation.getGenes();
-								String parsedDefinitionsByModule = "";
-								List<String> parsedDefinitionsByModuleAux = new ArrayList<String>();
-								int moduleCounter = 0;
-
-								for(ModuleCI module : geneAssociation.getModules().values()) {
-
-									moduleCounter++;
-									String[] koGeneResults = new String[11];
-
-									String definition = module.getDefinition();
-
-									koGeneResults[0] = String.join("|", module.getPathwaysNames());
-									koGeneResults[1] = String.join("|", module.getPathways());
-									koGeneResults[2] = module.getName();
-									koGeneResults[3] = module.getModule();
-									koGeneResults[4] = reaction;
-									koGeneResults[5] = protein;
-
-									String genesAsStr = "";
-									for(int geneIndex = 0; geneIndex < gene.size() ; geneIndex++)
-										if(geneIndex != gene.size() -1)
-											genesAsStr = genesAsStr + gene.get(geneIndex) + ",";
-										else
-											genesAsStr = genesAsStr + gene.get(geneIndex);
-
-									koGeneResults[6] = genesAsStr.trim();
-
-									koGeneResults[7] = definition;
-
-									koGeneResults[8] = parseDefinition(definition);
+				for(List<ReactionProteinGeneAssociation> rpga : rpgaList) {
 
 
-									char[] alphabeticallySortedDefinitionAsArray = koGeneResults[8].toCharArray();
-									Arrays.sort(alphabeticallySortedDefinitionAsArray);
-									String alphabeticallySortedDefinition = new String(alphabeticallySortedDefinitionAsArray);
+					if(rpga!=null)
+						for(int ruleIndex = 0; ruleIndex < rpga.size() ; ruleIndex++) {
+
+							ReactionsGPR_CI rpg = new ReactionsGPR_CI(rpga.get(ruleIndex).getReaction());
+
+							String reaction = rpg.getReaction();
+
+							for(ProteinGeneAssociation proteinRule : rpga.get(ruleIndex).getProteinGeneAssociation().values()) {
+
+								String protein = proteinRule.getProtein();
+
+								for(GeneAssociation geneAssociation : proteinRule.getGenes()) {
+
+									List<String> gene = geneAssociation.getGenes();
+									String parsedDefinitionsByModule = "";
+									List<String> parsedDefinitionsByModuleAux = new ArrayList<String>();
+									int moduleCounter = 0;
+
+									for(ModuleCI module : geneAssociation.getModules().values()) {
+
+										moduleCounter++;
+										String[] koGeneResults = new String[11];
+
+										String definition = module.getDefinition();
+
+										koGeneResults[0] = String.join("|", module.getPathwaysNames());
+										koGeneResults[1] = String.join("|", module.getPathways());
+										koGeneResults[2] = module.getName();
+										koGeneResults[3] = module.getModule();
+										koGeneResults[4] = reaction;
+										koGeneResults[5] = protein;
+
+										String genesAsStr = "";
+										for(int geneIndex = 0; geneIndex < gene.size() ; geneIndex++)
+											if(geneIndex != gene.size() -1)
+												genesAsStr = genesAsStr + gene.get(geneIndex) + ",";
+											else
+												genesAsStr = genesAsStr + gene.get(geneIndex);
+
+										koGeneResults[6] = genesAsStr.trim();
+
+										koGeneResults[7] = definition;
+
+										koGeneResults[8] = parseDefinition(definition);
 
 
-									if(!parsedDefinitionsByModule.isEmpty()) {
+										char[] alphabeticallySortedDefinitionAsArray = koGeneResults[8].toCharArray();
+										Arrays.sort(alphabeticallySortedDefinitionAsArray);
+										String alphabeticallySortedDefinition = new String(alphabeticallySortedDefinitionAsArray);
 
-										// avoid repeated definitions 
-										if(!parsedDefinitionsByModuleAux.contains(alphabeticallySortedDefinition)) {
 
-											parsedDefinitionsByModule += "," + koGeneResults[8];
+										if(!parsedDefinitionsByModule.isEmpty()) {
+
+											// avoid repeated definitions 
+											if(!parsedDefinitionsByModuleAux.contains(alphabeticallySortedDefinition)) {
+
+												parsedDefinitionsByModule += "," + koGeneResults[8];
+												parsedDefinitionsByModuleAux.add(alphabeticallySortedDefinition);
+											}
+										}
+
+										else {
+											parsedDefinitionsByModule += koGeneResults[8];
 											parsedDefinitionsByModuleAux.add(alphabeticallySortedDefinition);
 										}
+										results.add(koGeneResults);
 									}
 
-									else {
-										parsedDefinitionsByModule += koGeneResults[8];
-										parsedDefinitionsByModuleAux.add(alphabeticallySortedDefinition);
+									parsedDefinitionsByModule = mergeOrRules(parsedDefinitionsByModule);
+
+									for(int index = 0; index < moduleCounter; index++) {
+
+										results.get(results.size() - index -1)[9] = parsedDefinitionsByModule;
 									}
-									results.add(koGeneResults);
-								}
-
-								parsedDefinitionsByModule = mergeOrRules(parsedDefinitionsByModule);
-
-								for(int index = 0; index < moduleCounter; index++) {
-
-									results.get(results.size() - index -1)[9] = parsedDefinitionsByModule;
 								}
 							}
 						}
-					}
+				}
 			}
 		}
 		return results;
