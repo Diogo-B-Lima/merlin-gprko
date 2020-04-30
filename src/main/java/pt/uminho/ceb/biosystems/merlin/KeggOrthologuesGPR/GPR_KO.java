@@ -13,10 +13,13 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javassist.expr.NewArray;
 import pt.uminho.ceb.biosystems.merlin.bioapis.externalAPI.kegg.KeggAPI;
 import pt.uminho.ceb.biosystems.merlin.core.containers.gpr.GeneAssociation;
 import pt.uminho.ceb.biosystems.merlin.core.containers.gpr.ModuleCI;
@@ -240,29 +243,54 @@ public class GPR_KO {
 	private static List<Object[]> mergeParsedDefinitionsByModuleAndReaction(List<Object[]> gprRulesFinal) throws Exception{
 
 
-		HashMap<String, String> reactionsParsedDefinitions = new HashMap<String, String>();
+		HashMap<String, List<Object[]>> entriesByKo = new HashMap<String, List<Object[]>>();
+		ArrayList<Object[]> finalResult = new ArrayList<Object[]>();
 
-		// Compile all definitions by reaction
+		
+		// Create a map to filter entries by KO
 		for(Object[] entry:gprRulesFinal) {
-			String reaction = (String) entry[4];
-			String parsedDefinition = (String) entry[8];
-			if(!reactionsParsedDefinitions.containsKey(reaction))
-				reactionsParsedDefinitions.put(reaction, parsedDefinition);
-			else {
-				String oldDefinition = reactionsParsedDefinitions.get(reaction);
-				reactionsParsedDefinitions.replace(reaction, oldDefinition + "," + parsedDefinition);
+
+			String ko = (String) entry[6];
+			if(!entriesByKo.containsKey(ko)) {
+				ArrayList<Object[]> entriesList = new ArrayList<Object[]>();
+				entriesList.add(entry);
+				entriesByKo.put(ko, entriesList);
+			}
+			else
+				entriesByKo.get(ko).add(entry);
+		}
+
+
+		for(String koKey : entriesByKo.keySet()) {
+			
+			HashMap<String, String> reactionsParsedDefinitions = new HashMap<String, String>();
+			List<Object[]> entrySet = entriesByKo.get(koKey);
+			// Compile all definitions by reaction
+			for(Object[] entry:entrySet) {
+				String reaction = (String) entry[4];
+				String parsedDefinition = (String) entry[8];
+				if(!reactionsParsedDefinitions.containsKey(reaction)) {
+					reactionsParsedDefinitions.put(reaction, parsedDefinition);
+				}
+				else {
+					String oldDefinition = reactionsParsedDefinitions.get(reaction);
+					reactionsParsedDefinitions.replace(reaction, oldDefinition + "," + parsedDefinition);
+				}
+			}
+
+			// Merge all definitions with the same algorithm used for merging definitions by module
+			for(Map.Entry<String, String> entryReac : reactionsParsedDefinitions.entrySet())
+				reactionsParsedDefinitions.replace(entryReac.getKey(), mergeOrRules(entryReac.getValue()));
+
+			// Change the last value of the results (which were previosuly null) to the new merged definition
+			for(Object[] entryGPR:entrySet) {
+				entryGPR[10] = reactionsParsedDefinitions.get(entryGPR[4]);
+				finalResult.add(entryGPR);
 			}
 		}
 
-		// Merge all definitions with the same algorithm used for merging definitions by module
-		for(Map.Entry<String, String> entry : reactionsParsedDefinitions.entrySet())
-			reactionsParsedDefinitions.replace(entry.getKey(), mergeOrRules(entry.getValue()));
 
-		// Change the last value of the results (which were previosuly null) to the new merged definition
-		for(Object[] entry:gprRulesFinal) 
-			entry[10] = reactionsParsedDefinitions.get(entry[4]);
-
-		return gprRulesFinal;
+		return finalResult;
 	}
 
 
